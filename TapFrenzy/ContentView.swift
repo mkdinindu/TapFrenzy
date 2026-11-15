@@ -15,10 +15,9 @@ struct ContentView: View {
     @State private var timeRemaining = 10.0
     @State private var isRunning = false
     @State private var startTime = Date()
-
     @State private var gameTimer: Timer?
 
-    // MARK: - Random Red Period
+    // MARK: - Random Red Periods
 
     @State private var redPeriods: [Range<Double>] = []
     @State private var isRed = false
@@ -38,6 +37,8 @@ struct ContentView: View {
             Text("Beat your highest score!")
                 .foregroundColor(.secondary)
 
+            Spacer()
+
             // Timer Display
 
             VStack(spacing: 5) {
@@ -49,13 +50,14 @@ struct ContentView: View {
                 Text(String(format: "%.1f", timeRemaining))
                     .font(.system(size: 50, weight: .bold))
                     .foregroundColor(
-                        timeRemaining <= 3 ? .red : .primary
+                        timeRemaining <= 3 && isRunning
+                        ? .red : .primary
                     )
             }
 
             // Score Display
 
-            HStack(spacing: 40) {
+            HStack(spacing: 60) {
 
                 VStack {
                     Text("SCORE")
@@ -85,7 +87,11 @@ struct ContentView: View {
 
             Button(action: {
 
-                if isRunning {
+                if !isRunning {
+
+                    startGame()
+
+                } else {
 
                     if isRed && score >= 1{
                         score -= 1
@@ -97,44 +103,54 @@ struct ContentView: View {
 
             }) {
 
-                Text(isRed ? "DANGER!" : "TAP!")
-                    .font(.title)
-                    .bold()
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(25)
-                    .background(
-                        isRed ? Color.red : Color.green
+                VStack(spacing: 8) {
+
+                    Text(
+                        isRunning
+                        ? (isRed ? "DANGER!" : "TAP!")
+                        : (timeRemaining == 0
+                           ? "PLAY AGAIN"
+                           : "START GAME")
                     )
-                    .cornerRadius(20)
+                    .font(.title)
+                    .fontWeight(.bold)
+
+                    if !isRunning {
+                        Text("10 SECOND CHALLENGE")
+                            .font(.caption)
+                    }
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(25)
+                .background(
+
+                    isRunning
+                    ? (isRed ? Color.red : Color.green)
+                    : Color.blue
+
+                )
+                .cornerRadius(20)
             }
-            .disabled(!isRunning)
 
             Spacer()
-
-            // Start / Restart Button
-
-            Button(
-                isRunning ? "Game Running..." :
-                timeRemaining == 0 ? "Play Again" : "Start Game"
-            ) {
-
-                startGame()
-
-            }
-            .disabled(isRunning)
-            .font(.headline)
 
             // Game Over Message
 
             if timeRemaining == 0 {
 
-                Text("Game Over!")
+                Text("GAME OVER!")
                     .font(.title2)
                     .fontWeight(.bold)
 
                 Text("Final Score: \(score)")
                     .foregroundColor(.secondary)
+
+                if score >= highestScore && score > 0 {
+                    Text("NEW HIGH SCORE!")
+                        .font(.headline)
+                        .foregroundColor(.orange)
+                }
             }
 
         }
@@ -142,7 +158,7 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemGroupedBackground))
 
-        // Timer Management
+        // MARK: - Timer Management
 
         .onChange(of: isRunning) { oldValue, newValue in
 
@@ -165,13 +181,31 @@ struct ContentView: View {
         score = 0
         timeRemaining = 10
 
-        // Generate random red period
+        // Generate 3 or 4 random red periods
 
-        redDuration = Double(Int.random(in: 1...4))
+        let numberOfRedPeriods = Int.random(in: 3...4)
 
-        redStart = Double(
-            Int.random(in: 0...(10 - Int(redDuration)))
-        )
+        var selectedSlots: [Int] = []
+
+        while selectedSlots.count < numberOfRedPeriods {
+
+            let slot = Int.random(in: 0...9)
+
+            if !selectedSlots.contains(slot) &&
+               !selectedSlots.contains(slot - 1) &&
+               !selectedSlots.contains(slot + 1) {
+
+                selectedSlots.append(slot)
+            }
+        }
+
+        // Convert slots into time ranges
+
+        redPeriods = selectedSlots.map { slot in
+
+            Double(slot)..<Double(slot + 1)
+
+        }
 
         isRed = false
 
@@ -197,10 +231,13 @@ struct ContentView: View {
 
             timeRemaining = max(0, 10 - elapsed)
 
-            // Change button colour
+            // Check random red periods
 
-            isRed = elapsed >= redStart &&
-                    elapsed < redStart + redDuration
+            isRed = redPeriods.contains { period in
+
+                period.contains(elapsed)
+
+            }
 
             // Game Over
 
@@ -210,7 +247,7 @@ struct ContentView: View {
                 isRunning = false
                 isRed = false
 
-                // Update highest score
+                // Save highest score
 
                 if score > highestScore {
                     highestScore = score
