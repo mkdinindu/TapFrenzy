@@ -15,8 +15,13 @@ struct ContentView: View {
     @State private var timeRemaining = 10.0
     @State private var isRunning = false
     @State private var startTime = Date()
-
+    @State private var lastClickTime = Date()
+    
+    @State private var comboNum = 0
     @State private var gameTimer: Timer?
+    
+    @State var redDuration = 0.0
+    @State var redStart = 0.0
 
     // MARK: - Random Red Period
 
@@ -77,22 +82,44 @@ struct ContentView: View {
                         .bold()
                         .foregroundColor(.orange)
                 }
+                VStack {
+                    Text("Combo")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text("x\(comboNum)")
+                        .font(.largeTitle)
+                        .bold()
+                        .foregroundColor(.red)
+                }
             }
 
             Spacer()
-
+            Text("Press the button with 300 miliseconds to achieve combos!!")
+                .foregroundColor(.secondary)
+            Spacer()
             // Main Game Button
 
             Button(action: {
 
                 if isRunning {
+                    let currentTime = Date()
+                    let timeDifference = currentTime.timeIntervalSince(lastClickTime)
+                    lastClickTime = currentTime
 
                     if isRed && score >= 1{
                         score -= 1
+                        
+                            
                     } else {
                         score += 1
+                        print((timeDifference))
+                        if timeDifference < 0.3 {
+                            comboNum += 1
+                        }
                     }
 
+                }else {
+                    startGame()
                 }
 
             }) {
@@ -108,7 +135,7 @@ struct ContentView: View {
                     )
                     .cornerRadius(20)
             }
-            .disabled(!isRunning)
+            //.disabled(!isRunning)
 
             Spacer()
 
@@ -164,6 +191,7 @@ struct ContentView: View {
 
         score = 0
         timeRemaining = 10
+        comboNum = 0
 
         // Generate random red period
 
